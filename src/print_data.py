@@ -1,7 +1,6 @@
 
 
 def print_today(data):
-    # For get_weather3
     print("Country: ", data['country'])
     print("City: ", data['city'])
     print("Weather: ", data['weather_desc'])
@@ -13,8 +12,6 @@ def print_today(data):
     print("Humidity: ", data['humidity'])
     print("Visibility: ", data['visibility'])
 
-    # For 
-    #print(today_data)
 
 
 def print_forecast(data):
