@@ -1,8 +1,9 @@
 
 
-def print_today(data):
+def print_today(data, city_code):
     print("Country: ", data['country'])
     print("City: ", data['city'])
+    print("City code: ", city_code)
     print("Weather: ", data['weather_desc'])
 
     print("Temperature: ", data['temp'])
