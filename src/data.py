@@ -6,11 +6,17 @@ def fix_time(date, time_delay):
     
     return str(local_dt)[:-6]
 
+class Info:
+    def __init__(self):
+        pass
+
 
 def order_today(data):
     new_data = {}
     new_data['country'] = data['sys']['country']
     new_data['city'] = data['name']
+    new_data['clima'] = data['clima']
+    new_data['descripcion'] = data['descripcion']
 
     new_data['weather_desc'] = f"{data['weather'][0]['main']} {data['weather'][0]['description']}"
     new_data['temp'] =  f"{data['main']['temp']} °C (Feels like: {data['main']['feels_like']}°C)"
