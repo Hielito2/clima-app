@@ -1,9 +1,5 @@
-from timeit import default_timer as timer
-
-from src.get_data import get_forecast, new_data, get_city_names, get_coords_from_id, get_code_from_coords
-from src.print_data import print_forecast, print_today
-from src.data import order_today, order_forecast, fix_time
-from datetime import datetime, timezone
+from src.get_data import new_data, get_city_names, get_coords_from_id, get_code_from_coords
+from datetime import datetime
 #import rich
 #
 
@@ -13,8 +9,8 @@ class Clima:
     self.city_name = city_name
     self.days = days
     self.verbose = verbose
-    self.coords = ""
-    self.country = ""
+    self.coords = None
+    self.country = None
 
 
   def get_coords_by_id(self):
@@ -70,6 +66,8 @@ class Clima:
   def get_clima_data(self):
     today_data = {}
     hourly_data = {}
+    daily_data = {}
+
     request_data = new_data(self.coords)
     # Today Data
     today_data['Country'] = self.country
@@ -84,54 +82,33 @@ class Clima:
     today_data['Humidity'] = str(request_data['current']['humidity']) + ' %'
     today_data['Pressure'] = str(request_data['current']['pressure']) + ' hPa'
     today_data['Visibility'] = str(request_data['current']['visibility'] / 100) + ' km'
-    # hourly
-
+    
+    # Hourly
     for hour in request_data['hourly']:
       hour_time = str(hour['dt']) # str(self.fix_hour(datetime.fromtimestamp().isoformat()))
       hourly_data[hour_time] = {}
       hourly_data[hour_time]['Temperature'] = str(hour['temp']) + ' °C ' + f'(Feels Like: {hour['feels_like']} °C)'
+      hourly_data[hour_time]['Humidity'] = str(hour['humidity']) + ' % '
+      hourly_data[hour_time]['Clouds'] = str(hour['clouds']) + ' % '
       hourly_data[hour_time]['Weather'] = f'{hour['weather'][0]['main']} - {hour['weather'][0]['description']}'
       
       #print(fix_time(str(hour['dt']), request_data['timezone_offset']))
+    # Daily
+    for day in request_data['daily']:
+      day_time = str(day['dt']) # str(self.fix_hour(datetime.fromtimestamp().isoformat()))
+      daily_data[day_time] = {}
+      daily_data[day_time]['Summary'] = str(day['summary'])
+      daily_data[day_time]['Temp'] = day['temp']
+      daily_data[day_time]['Feels'] = day['feels_like']
+      daily_data[day_time]['Clouds'] = str(day['clouds']) + ' % '
+      daily_data[day_time]['Weather'] = f'{day['weather'][0]['main']} - {day['weather'][0]['description']}'
+
 
     
-
-    return today_data, hourly_data
-
+    return today_data, hourly_data, daily_data
 
 
-  def print_info(self):
-    # Extra data 
-    extra_data = new_data(self.coords)
-    self.today_data['clima'] = extra_data['current']['weather'][0]['main']
-    self.today_data['descripcion'] = extra_data['daily'][0]['summary']
-    #
-    today_data_sorted = order_today(self.today_data)
-    #
-    print('===================')
-    print("Today Weather")
-    print('===================')
-    print_today(today_data_sorted,  self.city_code)
-    print('===================')
-
-    if self.days == 0:
-      return
-
-    print("Forecast Weather")
-    print('===================')
-
-
-    forecast_data = get_forecast(self.coords)
-    time_delay = forecast_data['city']['timezone']  # Segundos
-
-    for day_n in range(self.days):
-        forescast_data_sorted, forecast_day = order_forecast(forecast_data['list'][day_n], time_delay)
-
-        print_forecast(forescast_data_sorted)
-        print('---------')
-
-
-def initialize(city_code, city_name, days, verbose):
+def initialize(city_code, city_name, days, hours_interval, verbose):
   # Validar
   if len(city_code) != 7  and city_code != "0":
     raise ValueError("Invalid city code")
@@ -147,17 +124,42 @@ def initialize(city_code, city_name, days, verbose):
     raise ValueError("Not valid city code or name...")
 
   # Get the info
-  today_data, hourly_data = clima.get_clima_data()
+  today_data, hourly_data, daily_data = clima.get_clima_data()
 
   # print
   print('===================')
   print("Today Weather")
   print('===================')
+
   for key, data in today_data.items():
     print(f'{key}: ', data)
-  print('===================')
-  print("Hourly forecast")
-  print('===================')
-  for key, data in hourly_data.items():
-    hour = clima.fix_hour(key)
-    print(f'{hour}: ', data)
+
+
+  if int(hours_interval) != 0:
+    print('===================')
+    print("Hourly forecast")
+    print('===================')
+
+    huk = 0
+    for key, data in hourly_data.items():
+      if huk == 0 or huk == int(hours_interval):
+        huk = 1
+        hour = clima.fix_hour(key)
+        print(f'{hour}: ', data)
+      else:
+        huk+=1 
+
+
+  if int(days) != 0:
+    print('===================')
+    print("Daily forecast")
+    print('===================')
+
+    huk = 0
+    for key, data in daily_data.items():
+      huk += 1
+      hour = clima.fix_hour(key)
+      print(f'{hour}: ', data)
+
+      if huk == int(days):
+        break
