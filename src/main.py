@@ -1,165 +1,146 @@
-from src.get_data import new_data, get_city_names, get_coords_from_id, get_code_from_coords
 from datetime import datetime
-#import rich
-#
+from zoneinfo import ZoneInfo
+
+from get_data import (
+    get_city_names,
+    get_code_from_coords,
+    get_coords_from_id,
+    new_data,
+)
+from print_rich import rich_print
+
 
 class Clima:
-  def __init__(self, city_code, city_name, days, verbose):
-    self.city_code = city_code
-    self.city_name = city_name
-    self.days = days
-    self.verbose = verbose
-    self.coords = None
-    self.country = None
+    def __init__(self, city_code, city_name, days, hours_interval, verbose):
+        self.city_code = city_code
+        self.city_name = city_name
+        self.days = days
+        self.hours_interval = hours_interval
+        self.verbose = verbose
+        self.coords = None
+        self.country = None
 
+    def fix_hour(self, timestamp, timezone_api):
+        local_dt = datetime.fromtimestamp(timestamp, tz=ZoneInfo(timezone_api))
+        return str(local_dt)[:-6]
 
-  def get_coords_by_id(self):
-    code_data = get_coords_from_id(self.city_code)
-    self.coords = f"lat={code_data['coord']['lat']}&lon={code_data['coord']['lon']}"
-    self.city_name = code_data['name']
-    self.country = code_data['sys']['country']
+    def get_coords_by_id(self):
+        code_data = get_coords_from_id(self.city_code)
+        self.coords = f"lat={code_data['coord']['lat']}&lon={code_data['coord']['lon']}"
+        self.city_name = code_data["name"]
+        self.country = code_data["sys"]["country"]
 
+    def get_cords_by_name(self):
+        req_data = get_city_names(self.city_name)
+        if len(req_data) < 1:
+            raise ValueError("Cero cities found")
 
-  def get_cords_by_name(self):
-    req_data = get_city_names(self.city_name)
-    if len(req_data) < 1:
-      raise ValueError("Cero cities found")
-    
-    print("== Choose the number of your city ==")
-    for i, city in enumerate(req_data, start=1):
-      print(f"{i} - {city['name']} - {city['country']} - {city['state']}")
+        print("== Choose the number of your city ==")
+        for i, city in enumerate(req_data, start=1):
+            print(f"{i} - {city['name']} - {city['country']} - {city['state']}")
 
-    
-    valid_city_option = False
+        while True:
+            try:
+                city_option = int(input("::").strip())
+                if city_option > len(req_data) or city_option < 1:
+                    print("Invalid city number")
+                else:
+                    break
+            except ValueError:
+                print("Invalid city number")
 
-    while not valid_city_option:
-      city_option = int(input("::"))
-      if city_option > len(req_data) or city_option < 1:
-        print("Invalid city number")
-        continue
-      else:
-        valid_city_option = True
+        city_data = req_data[city_option - 1]
 
-    city_data = req_data[city_option-1]
+        self.city_name = city["name"]
+        self.country = city["country"]
 
-    self.city_name = city['name']
-    self.country = city['country']
-    #print(city['country'])
+        self.coords = f"lat={city_data['lat']}&lon={city_data['lon']}"
+        self.city_code = get_code_from_coords(self.coords)
 
-    self.coords = f"lat={city_data['lat']}&lon={city_data['lon']}"
-    # get city code
-    self.city_code = get_code_from_coords(self.coords)
-    
+    def measure_time(message, time_taked):
+        print(f"{message} : {round(time_taked * 1000, 3)}ms")
 
+    def get_clima_data(self):
+        self.today_data = {}
+        self.hourly_data = {}
+        self.daily_data = {}
 
-  def measure_time(message, time_taked):
-    print(f"{message} : {round(time_taked * 1000, 3)}ms")
+        request_data = new_data(self.coords)
+        # Today Data
+        self.today_data["Country"] = self.country
+        self.today_data["City"] = self.city_name
+        self.today_data["Code"] = self.city_code
+        self.today_data["Time"] = self.fix_hour(
+            request_data["current"]["dt"], timezone_api=request_data["timezone"]
+        )
 
-  
-  def fix_hour(self, dt):
-    string_hour = datetime.fromtimestamp(int(dt)).isoformat()
-    new_hour = string_hour.split('T')[1] + " " + str(string_hour).split('T')[0]
+        current_weather = request_data["current"]["weather"][0]
+        self.today_data["Weather"] = (
+            f"{current_weather['main']} - {current_weather['description']}"
+        )
 
-    return new_hour
+        self.today_data["Summary"] = f"{request_data['daily'][0]['summary']}"
+        self.today_data["Temperature"] = (
+            str(request_data["current"]["temp"])
+            + " °C "
+            + f"(Feels Like: {request_data['current']['feels_like']} °C)"
+        )
+        self.today_data["Humidity"] = str(request_data["current"]["humidity"]) + " %"
+        self.today_data["Pressure"] = str(request_data["current"]["pressure"]) + " hPa"
+        self.today_data["Visibility"] = (
+            str(request_data["current"]["visibility"] / 100) + " km"
+        )
 
+        # Hourly
+        for hour in request_data["hourly"]:
+            hour_time = self.fix_hour(hour["dt"], timezone_api=request_data["timezone"])
+            self.hourly_data[hour_time] = {}
+            self.hourly_data[hour_time]["Temperature"] = (
+                str(hour["temp"]) + " °C " + f"(Feels Like: {hour['feels_like']} °C)"
+            )
+            self.hourly_data[hour_time]["Humidity"] = str(hour["humidity"]) + " % "
+            self.hourly_data[hour_time]["Clouds"] = str(hour["clouds"]) + " % "
+            self.hourly_data[hour_time]["Weather"] = (
+                f"{hour['weather'][0]['main']} - {hour['weather'][0]['description']}"
+            )
 
-  def get_clima_data(self):
-    today_data = {}
-    hourly_data = {}
-    daily_data = {}
+        # Daily
+        for day in request_data["daily"]:
+            day_time = self.fix_hour(day["dt"], timezone_api=request_data["timezone"])
+            self.daily_data[day_time] = {}
+            self.daily_data[day_time]["Summary"] = str(day["summary"])
+            self.daily_data[day_time]["Temp"] = day["temp"]
+            self.daily_data[day_time]["Feels"] = day["feels_like"]
+            self.daily_data[day_time]["Clouds"] = str(day["clouds"]) + " % "
+            self.daily_data[day_time]["Weather"] = (
+                f"{day['weather'][0]['main']} - {day['weather'][0]['description']}"
+            )
 
-    request_data = new_data(self.coords)
-    # Today Data
-    today_data['Country'] = self.country
-    today_data['City'] = self.city_name
-    today_data['Code'] = self.city_code
-    today_data['Time'] = self.fix_hour(request_data['current']['dt'])
-
-    current_weather = request_data['current']['weather'][0]
-    today_data['Weather'] = f'{current_weather['main']} - {current_weather['description']}'
-    today_data['Summary'] = f'{request_data['daily'][0]['summary']}'
-    today_data['Temperature'] = str(request_data['current']['temp']) + ' °C ' + f'(Feels Like: {request_data['current']['feels_like']} °C)'
-    today_data['Humidity'] = str(request_data['current']['humidity']) + ' %'
-    today_data['Pressure'] = str(request_data['current']['pressure']) + ' hPa'
-    today_data['Visibility'] = str(request_data['current']['visibility'] / 100) + ' km'
-    
-    # Hourly
-    for hour in request_data['hourly']:
-      hour_time = str(hour['dt']) # str(self.fix_hour(datetime.fromtimestamp().isoformat()))
-      hourly_data[hour_time] = {}
-      hourly_data[hour_time]['Temperature'] = str(hour['temp']) + ' °C ' + f'(Feels Like: {hour['feels_like']} °C)'
-      hourly_data[hour_time]['Humidity'] = str(hour['humidity']) + ' % '
-      hourly_data[hour_time]['Clouds'] = str(hour['clouds']) + ' % '
-      hourly_data[hour_time]['Weather'] = f'{hour['weather'][0]['main']} - {hour['weather'][0]['description']}'
-      
-      #print(fix_time(str(hour['dt']), request_data['timezone_offset']))
-    # Daily
-    for day in request_data['daily']:
-      day_time = str(day['dt']) # str(self.fix_hour(datetime.fromtimestamp().isoformat()))
-      daily_data[day_time] = {}
-      daily_data[day_time]['Summary'] = str(day['summary'])
-      daily_data[day_time]['Temp'] = day['temp']
-      daily_data[day_time]['Feels'] = day['feels_like']
-      daily_data[day_time]['Clouds'] = str(day['clouds']) + ' % '
-      daily_data[day_time]['Weather'] = f'{day['weather'][0]['main']} - {day['weather'][0]['description']}'
-
-
-    
-    return today_data, hourly_data, daily_data
+    def print_rich(self):
+        rich_print(
+            self.today_data,
+            self.hourly_data,
+            self.daily_data,
+            self.days,
+            self.hours_interval,
+        )
 
 
 def initialize(city_code, city_name, days, hours_interval, verbose):
-  # Validar
-  if len(city_code) != 7  and city_code != "0":
-    raise ValueError("Invalid city code")
+    # Validar
+    if len(city_code) != 7 and city_code != "0":
+        raise ValueError("Invalid city code")
 
+    clima = Clima(city_code, city_name, days, hours_interval, verbose)
 
-  clima = Clima(city_code, city_name, days, verbose)
+    if clima.city_code != "0":
+        clima.get_coords_by_id()
+    elif clima.city_name != "0":
+        clima.get_cords_by_name()
+    else:
+        raise ValueError("Not valid city code or name...")
 
-  if clima.city_code != "0":
-    clima.get_coords_by_id()
-  elif clima.city_name != "0":
-    clima.get_cords_by_name()
-  else:
-    raise ValueError("Not valid city code or name...")
-
-  # Get the info
-  today_data, hourly_data, daily_data = clima.get_clima_data()
-
-  # print
-  print('===================')
-  print("Today Weather")
-  print('===================')
-
-  for key, data in today_data.items():
-    print(f'{key}: ', data)
-
-
-  if int(hours_interval) != 0:
-    print('===================')
-    print("Hourly forecast")
-    print('===================')
-
-    huk = 0
-    for key, data in hourly_data.items():
-      if huk == 0 or huk == int(hours_interval):
-        huk = 1
-        hour = clima.fix_hour(key)
-        print(f'{hour}: ', data)
-      else:
-        huk+=1 
-
-
-  if int(days) != 0:
-    print('===================')
-    print("Daily forecast")
-    print('===================')
-
-    huk = 0
-    for key, data in daily_data.items():
-      huk += 1
-      hour = clima.fix_hour(key)
-      print(f'{hour}: ', data)
-
-      if huk == int(days):
-        break
+    # Get the info
+    clima.get_clima_data()
+    # Print Weather
+    clima.print_rich()
