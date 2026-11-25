@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -25,12 +26,20 @@ class Clima:
         return str(local_dt)[:-6]
 
     def get_coords_by_id(self):
+        if self.verbose:
+            start_time = time.perf_counter()
+
         code_data = get_coords_from_id(self.city_code)
         self.coords = f"lat={code_data['coord']['lat']}&lon={code_data['coord']['lon']}"
         self.city_name = code_data["name"]
         self.country = code_data["sys"]["country"]
+        if self.verbose:
+            end_time = time.perf_counter()
+            print(f"Time get coords by id: {round(end_time - start_time, 3)}seg")
 
     def get_cords_by_name(self):
+        if self.verbose:
+            start_time = time.perf_counter()
         req_data = get_city_names(self.city_name)
         if len(req_data) < 1:
             raise ValueError("Cero cities found")
@@ -56,9 +65,9 @@ class Clima:
 
         self.coords = f"lat={city_data['lat']}&lon={city_data['lon']}"
         self.city_code = get_code_from_coords(self.coords)
-
-    def measure_time(message, time_taked):
-        print(f"{message} : {round(time_taked * 1000, 3)}ms")
+        if self.verbose:
+            end_time = time.perf_counter()
+            print(f"Time get coords by name: {round(end_time - start_time, 3)}seg")
 
     def get_clima_data(self):
         self.today_data = {}
@@ -127,6 +136,8 @@ class Clima:
 
 
 def initialize(city_code, city_name, days, hours_interval, verbose):
+    if verbose:
+        start_time = time.perf_counter()
     # Validar
     if len(city_code) != 7 and city_code != "0":
         raise ValueError("Invalid city code")
@@ -144,3 +155,6 @@ def initialize(city_code, city_name, days, hours_interval, verbose):
     clima.get_clima_data()
     # Print Weather
     clima.print_rich()
+    if verbose:
+        end_time = time.perf_counter()
+        print(f"Program time to execute: {round(end_time - start_time, 3)}seg")
