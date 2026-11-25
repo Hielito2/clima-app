@@ -1,8 +1,5 @@
-from datetime import datetime
-
 from rich import box
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
@@ -21,7 +18,7 @@ def _temp_style(t: float) -> str:
     return "bold red"
 
 
-def print_today(today_data):
+def print_today(today_data) -> None:
     today = Table(
         title="Today Weather",
         box=box.ROUNDED,
@@ -38,7 +35,7 @@ def print_today(today_data):
     console.print(today)
 
 
-def print_hourly(hourly_data, hours_interval):
+def print_hourly(hourly_data, hours_interval) -> None:
     hourly = Table(
         title="Hourly Forecast",
         box=box.SIMPLE_HEAVY,
@@ -74,7 +71,7 @@ def print_hourly(hourly_data, hours_interval):
     console.print(hourly)
 
 
-def print_daily(daily_data, days):
+def print_daily(daily_data, days) -> None:
     daily = Table(
         title="Daily Forecast",
         box=box.SIMPLE_HEAVY,
@@ -111,7 +108,7 @@ def print_daily(daily_data, days):
     console.print(daily)
 
 
-def rich_print(today_data, hourly_data, daily_data, days, hours_interval):
+def rich_print(today_data, hourly_data, daily_data, days, hours_interval) -> None:
 
     # TODAY
     print_today(today_data)
