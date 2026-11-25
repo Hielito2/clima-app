@@ -62,9 +62,9 @@ def print_hourly(hourly_data, hours_interval) -> None:
 
         hourly.add_row(
             hour,
-            Text(main, style=_temp_style(float(main.split(" ")[0]))),
-            data.get("Humidity", "—"),
-            data.get("Clouds", "—"),
+            Text("🌡️" + main, style=_temp_style(float(main.split(" ")[0]))),
+            "🫧" + data.get("Humidity", "—"),
+            "☁️" + data.get("Clouds", "—"),
             data.get("Weather", "—"),
         )
 
