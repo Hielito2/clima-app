@@ -39,7 +39,6 @@ def print_today(today_data):
 
 
 def print_hourly(hourly_data, hours_interval):
-    print(hours_interval)
     hourly = Table(
         title="Hourly Forecast",
         box=box.SIMPLE_HEAVY,
@@ -56,6 +55,7 @@ def print_hourly(hourly_data, hours_interval):
     for key, data in hourly_data.items():
         if huk != 0 and huk != int(hours_interval):
             huk += 1
+            continue
 
         huk = 1
 
