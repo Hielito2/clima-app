@@ -11,7 +11,7 @@ parser.add_argument(
     metavar="days",
     type=int,
     default=2,
-    help="The days to see the weather (0-5)",
+    help="The days to see the weather (0-8)",
 )
 parser.add_argument(
     "-n",
